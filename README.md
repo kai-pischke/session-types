@@ -1,1 +1,1 @@
-# session-types
+# Multiparty Session Types Tool 
