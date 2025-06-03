@@ -1,0 +1,4 @@
+client -> server {
+    VoteYes : server -> client { Accepted : end },
+    VoteNo : server -> client { Rejected : end }
+}

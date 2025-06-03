@@ -1,0 +1,18 @@
+(library
+ (name      stc_lib)
+ (modules   (:standard \ main))
+ (wrapped     false)
+ (libraries menhirLib))
+
+(ocamllex lexer)           ; this will generate lexer.ml from lexer.mll
+(menhir
+ (modules parser)          ; this will generate parser.ml from parser.mly
+ (flags (--explain))
+)
+
+(executable
+ (name main)
+ (public_name stc)
+ (modules main)
+ (libraries stc_lib)  
+)

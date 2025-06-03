@@ -1,0 +1,5 @@
+(test
+ (name    tests)
+ (modules tests)
+ (libraries alcotest stc_lib))
+
