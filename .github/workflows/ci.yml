@@ -1,0 +1,56 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    name: Build & Test (${{ matrix.ocaml }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ocaml: [ "5.1", "4.14" ]   # test two major releases
+
+    steps:
+      #---------------------------------------------------------------
+      # 1.  Checkout code
+      #---------------------------------------------------------------
+      - uses: actions/checkout@v4
+
+      #---------------------------------------------------------------
+      # 2.  Set up OCaml + opam (with caching)
+      #---------------------------------------------------------------
+      - uses: avsm/setup-ocaml@v2
+        with:
+          ocaml-version: ${{ matrix.ocaml }}
+          dune-cache: true        # ⏩ dune's own _build cache
+          opam-depext: false      # ← we'll install depexts manually
+          opam-repositories: |
+            default
+      # Add system packages needed by menhir
+      - run: sudo apt-get update && sudo apt-get install -y m4
+
+      #---------------------------------------------------------------
+      # 3.  Install dependencies declared in the opam file(s)
+      #---------------------------------------------------------------
+      - run: opam install . --deps-only --with-test --yes
+
+      #---------------------------------------------------------------
+      # 4.  Build and run unit tests
+      #---------------------------------------------------------------
+      - run: dune build
+      - run: dune runtest
+
+      #---------------------------------------------------------------
+      # 5.  Enforce formatting (optional but recommended)
+      #---------------------------------------------------------------
+      - run: opam install ocamlformat --yes
+      - run: dune build @fmt --auto-promote
+      - run: git diff --exit-code   # fails if anything is re-formatted
+
