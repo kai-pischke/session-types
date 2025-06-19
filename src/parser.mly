@@ -9,8 +9,8 @@ open Ast
 %token EOF
 
 /* Entry points that must hit end-of-file */
-%start <Ast.global> gfile
-%start <Ast.local > lfile
+%start <string Ast.global> gfile
+%start <string Ast.local > lfile
 %%
 
 ident:
@@ -24,7 +24,7 @@ global_type:
   END                                     { GEnd Loc.dummy }
 | ident                                   { GVar ($1, Loc.dummy) }
 | REC ident DOT global_type               { GRec ($2, $4, Loc.dummy) }
-| ident ARROW ident LBRACE g_lab RBRACE   { GMsg ($1, $3, $5, Loc.dummy) }
+| ident ARROW ident LBRACE g_lab RBRACE   { GBra ($1, $3, $5, Loc.dummy) }
 | global_type BAR global_type             { GPar ($1, $3, Loc.dummy) }
 
 g_lab:
