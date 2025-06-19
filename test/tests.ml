@@ -147,8 +147,52 @@ let encode_tests =
   ; expect_ok "encode: hard test passes"    hard_encode
   ]
 
+let automaton_tests =
+  let open Automaton in
+  let test_case_graph name src expected_str =
+    test_case name `Quick (fun () ->
+      let g = parse_global src in
+      let g' = Encode.encode g in
+      let aut = of_global g' in
+      let pretty = string_of_graph aut in
+      Alcotest.(check string) "automaton pretty" expected_str pretty
+    )
+  in
+  [
+    test_case_graph
+      "GMsg simple"
+      "rec t. a -> b { Ok: t }"
+      "States: 0\nStart states: 0\nstate 0 (a,b)\nfrom 0 --label Ok--> 0\n"
+  ;
+    test_case_graph
+      "GBra simple"
+      "rec t. a -> b { Ok: end, Err: t }"
+      "States: 0\nStart states: 0\nstate 0 (a,b)\nfrom 0 --label Ok--> \nfrom 0 --label Err--> 0\n"
+  ;
+    test_case_graph
+      "Three in parallel"
+      "a -> b { Ok: end } | c -> d { X: end } | e -> f { Y: end }"
+      "States: 0, 1, 2\nStart states: 0, 1, 2\nstate 0 (a,b)\nstate 1 (c,d)\nstate 2 (e,f)\nfrom 0 --label Ok--> \nfrom 1 --label X--> \nfrom 2 --label Y--> \n"
+  ;
+    test_case_graph
+      "Nested parallel"
+      "a -> b { Ok: c -> d { X: end } | e -> f { Y: end } }"
+      "States: 0, 1, 2\nStart states: 0\nstate 0 (a,b)\nstate 1 (c,d)\nstate 2 (e,f)\nfrom 1 --label X--> \nfrom 2 --label Y--> \nfrom 0 --label Ok--> 1,2\n"
+  ;
+    test_case_graph
+      "Parallel with recursion both sides"
+      "(rec t. a -> b { Ok: t }) | (rec u. c -> d { X: u, Y: end })"
+      "States: 0, 1\nStart states: 0, 1\nstate 0 (a,b)\nstate 1 (c,d)\nfrom 0 --label Ok--> 0\nfrom 1 --label X--> 1\nfrom 1 --label Y--> \n"
+  ;
+    test_case_graph
+      "Nested recursion in parallel branch"
+      "rec t. a -> b { Ok: rec u. c -> d { X: u, Y: t } | e -> f { Z: end } }"
+      "States: 0, 1, 2, 3\nStart states: 1\nstate 0 (_,_)\nstate 1 (a,b)\nstate 2 (c,d)\nstate 3 (e,f)\nfrom 2 --label X--> 0\nfrom 2 --label Y--> 1\nfrom 3 --label Z--> \nfrom 1 --label Ok--> 2,3\n"
+  ]
+
 let () =
   Alcotest.run "Global-type utilities"
     [ "well-formedness", wf_tests
     ; "encode",          encode_tests
+    ; "automaton",       automaton_tests
     ]

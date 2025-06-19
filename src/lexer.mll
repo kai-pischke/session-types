@@ -21,6 +21,8 @@ rule token = parse
   | ','                              { COMMA  }
   | '|'                              { BAR    }
   | '.'                              { DOT    }
+  | '('                              { LPAREN }
+  | ')'                              { RPAREN }
 
   | ['A'-'Z' 'a'-'z' '_']['A'-'Z' 'a'-'z' '0'-'9' '_']* as id
                                       { kw id }

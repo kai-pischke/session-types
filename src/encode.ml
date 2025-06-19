@@ -6,7 +6,7 @@ open Ast
 
 let make_fresh () =
   let c = ref 0 in
-  fun () ->                       (* returns 0,1,2,… every time it’s called *)
+  fun () ->                       (* returns 0,1,2,… every time it's called *)
     let v = !c in incr c ; v
 
 (* ------------------------------------------------------------------ *)
@@ -58,8 +58,17 @@ let normalise (fresh : unit -> int) (g : string global) : int global =
         let bs' = List.map (fun (lbl,gi)-> lbl, ensure_rec fresh (norm env gi)) bs in
         GBra (p,q,bs',l)
     | GPar (g1,g2,l) ->
-        GPar (ensure_rec fresh (norm env g1),
-              ensure_rec fresh (norm env g2), l)
+        let g1' =
+          match g1 with
+          | GRec _ -> norm env g1
+          | _ -> let id = fresh () in GRec (id, norm env g1, Loc.dummy)
+        in
+        let g2' =
+          match g2 with
+          | GRec _ -> norm env g2
+          | _ -> let id = fresh () in GRec (id, norm env g2, Loc.dummy)
+        in
+        GPar (g1', g2', l)
   in
   ensure_rec fresh (norm [] g)       (* make sure the whole tree is under one GRec *)
 

@@ -1,0 +1,4 @@
+(executable
+ (name print_automaton)
+ (modules print_automaton)
+ (libraries stc_lib)) 
