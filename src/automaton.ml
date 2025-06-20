@@ -140,25 +140,33 @@ let of_global (g : int global) : graph =
       | c -> c
     ) states
   in
-  (* Assign new state numbers 0..n-1 in this order *)
-  let id_map =
-    List.mapi (fun new_id s -> (s.id, new_id)) states_sorted
-    |> List.to_seq |> Hashtbl.of_seq
-  in
-  let remap_id id = Hashtbl.find id_map id in
-  let remap_state s = { id = remap_id s.id; label = s.label } in
-  let remap_transition tr =
-    { src = remap_id tr.src;
-      label = tr.label;
-      dsts = List.map remap_id tr.dsts }
-  in
-  let remap_start_states = List.map remap_id (List.sort_uniq compare (get_start_states g)) in
-  {
-    num_states = List.length states_sorted;
-    start_states = remap_start_states;
-    states = List.map remap_state states_sorted;
-    transitions = List.rev_map remap_transition !transitions;
-  }
+  if states_sorted = [] then
+    {
+      num_states = 0;
+      start_states = [];
+      states = [];
+      transitions = [];
+    }
+  else
+    (* Assign new state numbers 0..n-1 in this order *)
+    let id_map =
+      List.mapi (fun new_id s -> (s.id, new_id)) states_sorted
+      |> List.to_seq |> Hashtbl.of_seq
+    in
+    let remap_id id = Hashtbl.find id_map id in
+    let remap_state s = { id = remap_id s.id; label = s.label } in
+    let remap_transition tr =
+      { src = remap_id tr.src;
+        label = tr.label;
+        dsts = List.map remap_id tr.dsts }
+    in
+    let remap_start_states = List.map remap_id (List.sort_uniq compare (get_start_states g)) in
+    {
+      num_states = List.length states_sorted;
+      start_states = remap_start_states;
+      states = List.map remap_state states_sorted;
+      transitions = List.rev_map remap_transition !transitions;
+    }
 
 (* Pretty printing for debugging and tests *)
 let pp_transition_label fmt = function

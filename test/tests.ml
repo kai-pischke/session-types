@@ -133,7 +133,7 @@ let hard_encode () =
 let wf_tests =
   [ expect_ok    "simple valid"           simple_valid
   ; expect_ok    "parallel valid"         parallel_valid
-  ; expect_error "self‑messaging"         self_msg_invalid
+  ; expect_error "self-messaging"         self_msg_invalid
   ; expect_error "unguarded recursion"    unguarded_rec_invalid
   ; expect_error "unguarded nested recursion" nested_unguarded_rec_invalid
   ; expect_error "overlapping parallel"   overlapping_parallel_invalid
@@ -159,6 +159,11 @@ let automaton_tests =
     )
   in
   [
+    test_case_graph
+      "GEnd"
+      "end"
+      "States: \nStart states: \n"
+  ;
     test_case_graph
       "GMsg simple"
       "rec t. a -> b { Ok: t }"
