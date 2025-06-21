@@ -62,7 +62,16 @@ let () =
   | `Global gt -> (
       try
         Well_formed.check_global gt;
-        printf "✓ Well-formed global session type.\n%!"
+        printf "✓ Well-formed global session type.\n%!";
+        
+        (* Encode and create automaton *)
+        let gt' = Encode.encode gt in
+        let aut = Automaton.of_global gt' in
+        printf "Automaton:\n%s\n" (Automaton.string_of_graph aut);
+        
+        (* Check balance *)
+        let balanced = Balance.is_balanced aut in
+        printf "Balance: %s\n" (if balanced then "balanced" else "unbalanced")
       with
       | Well_formed.Error (loc, msg) ->
           eprintf "Well-formedness error at %s:\n  %s\n%!"

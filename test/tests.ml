@@ -182,7 +182,7 @@ let automaton_tests =
     test_case_graph
       "Nested parallel"
       "a -> b { Ok: c -> d { X: end } | e -> f { Y: end } }"
-      "States: 0, 1, 2\nStart states: 0\nstate 0 (a,b)\nstate 1 (c,d)\nstate 2 (e,f)\nfrom 1 --label X--> \nfrom 2 --label Y--> \nfrom 0 --label Ok--> 1,2\n"
+      "States: 0, 1, 2\nStart states: 0\nstate 0 (a,b)\nstate 1 (c,d)\nstate 2 (e,f)\nfrom 0 --label Ok--> 1,2\nfrom 1 --label X--> \nfrom 2 --label Y--> \n"
   ;
     test_case_graph
       "Parallel with recursion both sides"
@@ -192,7 +192,35 @@ let automaton_tests =
     test_case_graph
       "Nested recursion in parallel branch"
       "rec t. a -> b { Ok: rec u. c -> d { X: u, Y: t } | e -> f { Z: end } }"
-      "States: 0, 1, 2, 3\nStart states: 1\nstate 0 (_,_)\nstate 1 (a,b)\nstate 2 (c,d)\nstate 3 (e,f)\nfrom 2 --label X--> 0\nfrom 2 --label Y--> 1\nfrom 3 --label Z--> \nfrom 1 --label Ok--> 2,3\n"
+      "States: 0, 1, 2, 3\nStart states: 1\nstate 0 (_,_)\nstate 1 (a,b)\nstate 2 (c,d)\nstate 3 (e,f)\nfrom 1 --label Ok--> 2,3\nfrom 2 --label X--> 0\nfrom 2 --label Y--> 1\nfrom 3 --label Z--> \n"
+  ;
+    test_case_graph
+      "Branch successor present"
+      "rec t. a -> b { X: c -> d { Z: end }, Y : t }"
+      "States: 0, 1, 2\nStart states: 0\nstate 0 (a,b)\nstate 1 (c,d)\nstate 2 (a,b)\nfrom 0 --label X--> 1\nfrom 0 --label Y--> 2\nfrom 1 --label Z--> \nfrom 2 --label X--> 1\nfrom 2 --label Y--> 2\n"
+  ]
+
+let balance_tests =
+  let open Balance in
+  let check_balanced name src expected =
+    test_case name `Quick (fun () ->
+      let g = parse_global src in
+      let g' = Encode.encode g in
+      let aut = Automaton.of_global g' in
+      let res = is_balanced aut in
+      Alcotest.(check bool) "balanced?" expected res
+    )
+  in
+  [ check_balanced "rec loop balanced" "rec t. a -> b { X: t }" true
+  ; check_balanced "double rec loop balanced" "rec t. a -> b { X: a -> b { Y: t } }" true
+  ; check_balanced "parallel balanced" "a -> b { Ok: end } | c -> d { X: end }" true
+  ; check_balanced "unbalanced branch" "rec t. a -> b { X: c -> d { Z: end }, Y : t }" false
+  ; check_balanced "unbalanced recursion branch" "rec t. a -> b { X: a -> b { Z: end }, Y : c -> d { A: t } }" false
+  ; check_balanced "balanced nested rec || rec" "(rec t. a -> b { X: t }) | (rec u. c -> d { Y: u })" true
+  ; check_balanced "balanced rec around parallel" "rec t. (a -> b { X: end } | c -> d { Y: end })" true
+  ; check_balanced "balanced side stops" "(rec t. a -> b { X: t }) | (c -> d { Y: end })" true
+  ; check_balanced "unbalanced deep mix" "(rec t. a -> b { X: (c -> d { Z: end } | e -> f { W: t }), Y: t }) | (g -> h { U: end })" false
+  ; check_balanced "unbalanced terminating branch" "rec t. a -> b { X: c -> d { Z: end }, Y : t }" false
   ]
 
 let () =
@@ -200,4 +228,5 @@ let () =
     [ "well-formedness", wf_tests
     ; "encode",          encode_tests
     ; "automaton",       automaton_tests
+    ; "balance",         balance_tests
     ]

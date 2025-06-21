@@ -1,0 +1,1 @@
+(rec t. a -> b { X: t }) | (c -> d { Y: end }) 
