@@ -17,7 +17,10 @@ rule token = parse
   | '!'                              { BANG  }
   | '{'                              { LBRACE }
   | '}'                              { RBRACE }
+  | '['                              { LBRACK }
+  | ']'                              { RBRACK }
   | ':'                              { COLON  }
+  | ';'                              { SEMI   }
   | ','                              { COMMA  }
   | '|'                              { BAR    }
   | '.'                              { DOT    }

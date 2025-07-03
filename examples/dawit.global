@@ -1,0 +1,5 @@
+rec t1 . a -> b : [Int] ; 
+rec t2 . b -> c {
+    L :  a -> b : [Int] ; t2,
+    R : t1
+}

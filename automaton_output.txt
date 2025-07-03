@@ -1,4 +1,0 @@
-File "print_automaton.ml", line 2, characters 0-8:
-2 | open Ast
-    ^^^^^^^^
-Error (warning 33 [unused-open]): unused open Ast.

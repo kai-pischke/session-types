@@ -16,8 +16,10 @@ type 'v local =
   | LEnd                                 of t
   | LVar       of 'v                     * t
   | LRec       of 'v * 'v local          * t
-  | LRecv      of role * (label * 'v local) list * t
-  | LSend      of role * (label * 'v local) list * t
+  | LInt       of role * (label * 'v local) list * t
+  | LExt       of role * (label * 'v local) list * t
+  | LRecv      of role * base * 'v local * t
+  | LSend      of role * base * 'v local * t
 
 let loc_of_global = function
   | GEnd       l
@@ -31,6 +33,8 @@ let loc_of_local = function
   | LEnd       l
   | LVar (_,l)
   | LRec (_,_,l)
-  | LRecv (_,_,l)
-  | LSend (_,_,l) -> l
+  | LInt (_,_,l)
+  | LExt (_,_,l)
+  | LRecv (_,_,_,l)
+  | LSend (_,_,_,l) -> l
 

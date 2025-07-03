@@ -18,8 +18,10 @@ type 'v local =
   | LEnd                                 of t
   | LVar       of 'v                     * t
   | LRec       of 'v * 'v local          * t
-  | LRecv      of role * (label * 'v local) list * t
-  | LSend      of role * (label * 'v local) list * t
+  | LInt       of role * (label * 'v local) list * t
+  | LExt       of role * (label * 'v local) list * t
+  | LRecv      of role * base * 'v local * t
+  | LSend      of role * base * 'v local * t
 
 
 val loc_of_global : 'v global -> t

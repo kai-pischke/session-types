@@ -67,11 +67,32 @@ let () =
         (* Encode and create automaton *)
         let gt' = Encode.encode gt in
         let aut = Automaton.of_global gt' in
-        printf "Automaton:\n%s\n" (Automaton.string_of_graph aut);
+        (*printf "Automaton:\n%s\n" (Automaton.string_of_graph aut);*)
         
         (* Check balance *)
         let balanced = Balance.is_balanced aut in
-        printf "Balance: %s\n" (if balanced then "balanced" else "unbalanced")
+        printf "Balance: %s\n" (if balanced then "balanced" else "unbalanced");
+
+        if balanced then (
+          (* Determine participants *)
+          let participants = ref Balance.RoleSet.empty in
+          for i = 0 to aut.num_states - 1 do
+            let (s,r) = aut.roles.(i) in
+            participants := Balance.RoleSet.add s !participants;
+            participants := Balance.RoleSet.add r !participants;
+          done;
+          printf "\nProjections:\n";
+          Balance.RoleSet.iter (fun p ->
+            match Projection.project aut p with
+            | Error msg ->
+                printf "- %s: not projectable (%s)\n" p msg
+            | Ok loc_aut -> (
+                match Automaton_to_local.automaton_to_local loc_aut with
+                | local_ast ->
+                    let text = Pretty.string_of_local (fun fmt v -> Format.fprintf fmt "%d" v) local_ast in
+                    printf "- %s : %s\n" p text )
+          ) !participants
+        )
       with
       | Well_formed.Error (loc, msg) ->
           eprintf "Well-formedness error at %s:\n  %s\n%!"
