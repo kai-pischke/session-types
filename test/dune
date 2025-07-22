@@ -1,5 +1,18 @@
 (test
  (name    tests)
- (modules tests)
+ (modules tests
+          test_helpers
+          well_formedness_tests
+          encode_tests
+          automaton_tests
+          balance_tests
+          local_type_tests
+          global_msg_tests
+          local_automaton_tests
+          live_tests
+          automaton_to_global_tests
+          automaton_to_local_tests
+          projection_tests
+          synthesis_tests)
  (libraries alcotest stc_lib))
 

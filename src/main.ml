@@ -42,23 +42,124 @@ let parse_file ~local fname =
       eprintf "Syntax error at %s\n%!" (string_of_position p);
       close_in ic; exit 1
 
+let parse_string ~local src =
+  let lb = from_string src in
+  lb.lex_curr_p <- { lb.lex_curr_p with pos_fname = "<cmdline>" };
+  try
+    if local
+    then `Local (Parser.lfile Lexer.token lb)
+    else `Global (Parser.gfile Lexer.token lb)
+  with
+  | Parser.Error ->
+      let p = lb.lex_curr_p in
+      eprintf "Syntax error at %s\n%!" (string_of_position p);
+      exit 1
+
 (*--------------------------------------------------------------------*)
 (*  Main                                                               *)
 (*--------------------------------------------------------------------*)
 let () =
   let local = ref false in
-  let file  = ref "" in
+  let synth = ref false in
+  let files : string list ref = ref [] in
+  let value = ref None in
   let speclist =
     [ "--local", Arg.Set local,
-        " Parse the input as a local type (default: global)" ]
+        " Parse the input as a local type (default: global)";
+      "--synth", Arg.Set synth,
+        " Synthesize a global type from multiple local files";
+      "-v", Arg.String (fun s -> value := Some s),
+        " Parse the given string as a type (instead of a file)";
+      "--value", Arg.String (fun s -> value := Some s),
+        " Parse the given string as a type (instead of a file)";
+    ]
   in
-  Arg.parse speclist (fun f -> file := f) "stc [--local] <file>";
-  if !file = "" then (eprintf "No input file given.\n%!"; exit 1);
+  Arg.parse speclist (fun f -> files := !files @ [f]) "stc [options] <file(s)>";
 
-  match parse_file ~local:!local !file with
-  | `Local _lt ->
-      printf "✓ Parsed a local session type.\n%!"
+  (* Helper: expand directories into contained regular files *)
+  let rec expand_paths acc = function
+    | [] -> List.rev acc
+    | p::ps ->
+        (try
+           if Sys.is_directory p then (
+             let entries = Sys.readdir p |> Array.to_list in
+             let full = List.map (Filename.concat p) entries in
+             expand_paths acc (full @ ps)
+           ) else expand_paths (p::acc) ps
+         with Sys_error _ -> expand_paths acc ps)
 
+  in
+
+  (* Synthesis mode -------------------------------------------------- *)
+  if !synth then (
+    if !files = [] then (eprintf "No local input files given for synthesis.\n%!"; exit 1);
+    let file_list = expand_paths [] !files in
+    (* Parse each file as local type, encode, build automata *)
+    let parts =
+      List.filter_map (fun fname ->
+        if Filename.extension fname = "" || Filename.extension fname = ".st" then
+          match parse_file ~local:true fname with
+          | `Local lt ->
+              let lt_enc = Encode.encode_local lt in
+              let role = Filename.chop_extension (Filename.basename fname) in
+              let la = Local_automaton.of_local lt_enc in
+              Some { Synthesis.role = role; laut = la }
+          | _ -> None
+        else None) file_list
+    in
+    match Synthesis.synthesise parts with
+    | Error msg -> eprintf "Synthesis error: %s\n%!" msg; exit 1
+    | Ok g ->
+        (* Convert automaton to global type *)
+        let g_global = Automaton_to_global.automaton_to_global g in
+        let text = Pretty.string_of (fun fmt v -> Format.fprintf fmt "%d" v) g_global in
+        printf "Synthesised global type:\n%s\n%!" text;
+        exit 0
+  );
+
+  (* Regular single-input mode --------------------------------------- *)
+  let file = match !files with
+    | [f] -> f
+    | [] -> ""
+    | _ -> (eprintf "Multiple files given without --synth flag.\n%!"; exit 1)
+
+  in
+
+  if !value = None && file = "" then (
+    eprintf "No input given. Use -v <type> or provide a file.\n%!"; exit 1);
+
+  let input = match !value with
+    | Some v -> `String v
+    | None -> `File file
+  in
+
+  let parsed = match input with
+    | `String src -> parse_string ~local:!local src
+    | `File fname -> parse_file ~local:!local fname
+  in
+
+  match parsed with
+  | `Local lt ->
+      printf "✓ Parsed a local session type.\n%!";
+      let la = Local_automaton.of_local (Encode.encode_local lt) in
+      printf "Local automaton:\n";
+      printf "num_states: %d\n" la.num_states;
+      printf "start_state: %s\n" (match la.start_state with Some i -> string_of_int i | None -> "None");
+      for i = 0 to la.num_states - 1 do
+        printf "state %d: role=%s, " i la.roles.(i);
+        begin match la.kinds.(i) with
+        | Local_automaton.Snd (base, dst) ->
+            printf "Snd(%s, %s)\n" base (match dst with Some j -> string_of_int j | None -> "end")
+        | Local_automaton.Rcv (base, dst) ->
+            printf "Rcv(%s, %s)\n" base (match dst with Some j -> string_of_int j | None -> "end")
+        | Local_automaton.Int branches ->
+            printf "Int([%s])\n" (String.concat ";" (List.map (fun (lbl, dst) ->
+              Printf.sprintf "%s->%s" lbl (match dst with Some j -> string_of_int j | None -> "end")) branches))
+        | Local_automaton.Ext branches ->
+            printf "Ext([%s])\n" (String.concat ";" (List.map (fun (lbl, dst) ->
+              Printf.sprintf "%s->%s" lbl (match dst with Some j -> string_of_int j | None -> "end")) branches))
+        end
+      done
   | `Global gt -> (
       try
         Well_formed.check_global gt;
@@ -67,7 +168,6 @@ let () =
         (* Encode and create automaton *)
         let gt' = Encode.encode gt in
         let aut = Automaton.of_global gt' in
-        (*printf "Automaton:\n%s\n" (Automaton.string_of_graph aut);*)
         
         (* Check balance *)
         let balanced = Balance.is_balanced aut in
