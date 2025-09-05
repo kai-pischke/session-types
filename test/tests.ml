@@ -15,6 +15,8 @@ let suites =
   ; Automaton_to_local_tests.suite
   ; Projection_tests.suite
   ; Synthesis_tests.suite
+  ; Connected_tests.suite
+  ; Synthesiser_tests.suite
   ]
 
 let () = Alcotest.run "Global-type utilities" suites

@@ -221,7 +221,7 @@ let state_of cfg idx = cfg.(idx)
 
 (* Pointer array of locals in role-index order *)
 let build_local_array (roles:RoleIndex.t) (locals:local_family) : local_participant array =
-  let empty_la = { LA.num_states = 0; start_state = None; roles = [||]; kinds = [||] } in
+  let empty_la = LA.empty_graph () in
   let arr = Array.init (Array.length roles.of_index) (fun _ -> { role=""; laut = empty_la }) in
   List.iter (fun lp ->
     let idx = RoleIndex.index_of roles lp.role in

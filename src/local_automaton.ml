@@ -32,6 +32,16 @@ type graph = {
   kinds        : state_kind array;     (* id ↦ behaviour (Msg | Int | Ext) *)
 }
 
+(* Int-based version of the graph *)
+type int_graph = {
+  num_states   : int;                  (* n: states are 0..n-1            *)
+  start_state  : int option;           (* S_0: start state (None if empty) *)
+
+  (* Efficient state-indexed maps (arrays) *)
+  roles        : int array;            (* id ↦ role (as int)               *)
+  kinds        : state_kind array;     (* id ↦ behaviour (Msg | Int | Ext) *)
+}
+
 (* Helper function to convert destination to int option *)
 let destination_to_int_option (dest : destination) (var_map : int IntMap.t) : int option =
   match dest with
@@ -66,6 +76,36 @@ let resolve_state_kind (kind : intermediate_state_kind) (var_map : int IntMap.t)
 let initial_intermediate_state_kind () : intermediate_state_kind =
   Snd ("", End)
 
+(* Helper to create empty graphs *)
+let empty_graph () : graph = {
+  num_states = 0;
+  start_state = None;
+  roles = [| |];
+  kinds = [| |];
+}
+
+let empty_int_graph () : int_graph = {
+  num_states = 0;
+  start_state = None;
+  roles = [| |];
+  kinds = [| |];
+}
+
+(* Conversion functions between string and int representations *)
+let graph_to_int_graph (g : graph) (role_to_int : role -> int) : int_graph = {
+  num_states = g.num_states;
+  start_state = g.start_state;
+  roles = Array.map role_to_int g.roles;
+  kinds = g.kinds;
+}
+
+let int_graph_to_graph (g : int_graph) (int_to_role : int -> role) : graph = {
+  num_states = g.num_states;
+  start_state = g.start_state;
+  roles = Array.map int_to_role g.roles;
+  kinds = g.kinds;
+}
+
 let of_local (l : int local) : graph =
   (* Fresh state ids *)
   let counter = ref 0 in
@@ -97,7 +137,7 @@ let of_local (l : int local) : graph =
   let rec build_graph (l : int local) : destination =
     match l with
     | LEnd _ -> 
-        (* LEnd doesn't correspond to a state *)
+        (* LEnd doesn't correspond to a state - use End destination *)
         End
     | LVar (v, _) -> 
         (* Variable reference *)
@@ -167,6 +207,11 @@ let of_local (l : int local) : graph =
     kinds = final_kinds;
   }
 
+(* Create int-based graph directly from local type *)
+let of_local_int (l : int local) (role_to_int : role -> int) : int_graph =
+  let string_graph = of_local l in
+  graph_to_int_graph string_graph role_to_int
+
 (* Pretty printing for debugging and tests *)
 let pp_state fmt (id : int) (roles : role array) =
   let role = roles.(id) in
@@ -217,4 +262,29 @@ let pp_graph fmt (g : graph) =
   ) state_ids
 
 let string_of_graph g =
-  Format.asprintf "%a" pp_graph g 
+  Format.asprintf "%a" pp_graph g
+
+(* Pretty printing for int-based graphs *)
+let pp_int_state fmt (id : int) (roles : int array) =
+  let role = roles.(id) in
+  Format.fprintf fmt "state %d (role %d)" id role
+
+let pp_int_graph fmt (g : int_graph) =
+  let state_ids = List.init g.num_states (fun i -> i) in
+  Format.fprintf fmt "States: %s\n" 
+    (String.concat ", " (List.map string_of_int state_ids));
+  Format.fprintf fmt "Start state: %s\n" 
+    (match g.start_state with
+     | Some id -> string_of_int id
+     | None -> "none");
+  List.iter (fun id -> 
+    pp_int_state fmt id g.roles;
+    Format.fprintf fmt "\n"
+  ) state_ids;
+  (* Print transitions in order of source state ID *)
+  List.iter (fun id -> 
+    pp_state_kind fmt id g.kinds
+  ) state_ids
+
+let string_of_int_graph g =
+  Format.asprintf "%a" pp_int_graph g 

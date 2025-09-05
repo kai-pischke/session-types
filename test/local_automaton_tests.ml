@@ -103,6 +103,35 @@ let local_automaton_tests =
        | Int [("A", Some 1); ("B", Some 2)] -> ()
        | _ -> fail "Expected Int with A->1 and B->2 branches")
     );
+
+    test_case "Int-based graph conversion" `Quick (fun () ->
+      (* Test the new int-based functions *)
+      let empty_g = empty_graph () in
+      let empty_ig = empty_int_graph () in
+      Alcotest.(check int) "empty graph states" 0 empty_g.num_states;
+      Alcotest.(check int) "empty int graph states" 0 empty_ig.num_states;
+      
+      (* Test conversion functions *)
+      let role_to_int = function "p" -> 0 | "q" -> 1 | "r" -> 2 | _ -> 3 in
+      let int_to_role = function 0 -> "p" | 1 -> "q" | 2 -> "r" | _ -> "unknown" in
+      
+      let g = build_la (parse_local "p ! [Int]; end") in
+      let ig = graph_to_int_graph g role_to_int in
+      let g2 = int_graph_to_graph ig int_to_role in
+      
+      Alcotest.(check int) "conversion preserves num_states" g.num_states ig.num_states;
+      Alcotest.(check int) "conversion preserves num_states back" g.num_states g2.num_states;
+      Alcotest.(check (option int)) "conversion preserves start_state" g.start_state ig.start_state;
+      
+      (* Test direct creation *)
+      let ig_direct = of_local_int (Encode.encode_local (parse_local "q ? [String]; end")) role_to_int in
+      Alcotest.(check int) "direct int graph states" 1 ig_direct.num_states;
+      Alcotest.(check (option int)) "direct int graph start" (Some 0) ig_direct.start_state;
+      
+      (* Test pretty printing *)
+      let _ = string_of_int_graph ig_direct in
+      ()
+    );
   ]
 
 let suite = ("local-automaton", local_automaton_tests) 

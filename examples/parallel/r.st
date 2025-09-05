@@ -1,1 +1,1 @@
-s ! [Bool]; end 
+q ? [Unit]; s ! [Bool]; end 

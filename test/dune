@@ -13,6 +13,8 @@
           automaton_to_global_tests
           automaton_to_local_tests
           projection_tests
-          synthesis_tests)
+          synthesis_tests
+          connected_tests
+          synthesiser_tests)
  (libraries alcotest stc_lib))
 

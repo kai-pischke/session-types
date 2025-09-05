@@ -6,14 +6,14 @@ open Local_automaton
 
 (* Compute the exploration bound m                                           *)
 let exploration_bound (automata : Local_automaton.graph array) : int =
-  let sizes = Array.to_list (Array.map (fun g -> max 1 g.num_states) automata) in
+  let sizes = Array.to_list (Array.map (fun (g : Local_automaton.graph) -> max 1 g.num_states) automata) in
   let n  = List.fold_left ( + ) 0 sizes in
   let n' = List.fold_left ( * ) 1 sizes in
   (2 * n + 2) * n'
 
 (* Build the initial combined state (array of ints).                         *)
 let initial_state (automata : Local_automaton.graph array) : combined_state =
-  Array.mapi (fun _idx g -> match g.start_state with Some s -> s | None -> 0) automata
+  Array.mapi (fun _idx (g : Local_automaton.graph) -> match g.start_state with Some s -> s | None -> 0) automata
 
 (* Helper for Option.value for older compilers *)
 let option_value opt ~default = match opt with Some v -> v | None -> default

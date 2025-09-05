@@ -61,6 +61,7 @@ let parse_string ~local src =
 let () =
   let local = ref false in
   let synth = ref false in
+  let synthesiser = ref false in
   let files : string list ref = ref [] in
   let value = ref None in
   let speclist =
@@ -68,6 +69,8 @@ let () =
         " Parse the input as a local type (default: global)";
       "--synth", Arg.Set synth,
         " Synthesize a global type from multiple local files";
+      "--synthesiser", Arg.Set synthesiser,
+        " Use the new synthesiser algorithm to synthesize global types";
       "-v", Arg.String (fun s -> value := Some s),
         " Parse the given string as a type (instead of a file)";
       "--value", Arg.String (fun s -> value := Some s),
@@ -91,30 +94,71 @@ let () =
   in
 
   (* Synthesis mode -------------------------------------------------- *)
-  if !synth then (
+  if !synth || !synthesiser then (
     if !files = [] then (eprintf "No local input files given for synthesis.\n%!"; exit 1);
     let file_list = expand_paths [] !files in
-    (* Parse each file as local type, encode, build automata *)
-    let parts =
-      List.filter_map (fun fname ->
-        if Filename.extension fname = "" || Filename.extension fname = ".st" then
-          match parse_file ~local:true fname with
-          | `Local lt ->
-              let lt_enc = Encode.encode_local lt in
-              let role = Filename.chop_extension (Filename.basename fname) in
-              let la = Local_automaton.of_local lt_enc in
-              Some { Synthesis.role = role; laut = la }
-          | _ -> None
-        else None) file_list
-    in
-    match Synthesis.synthesise parts with
-    | Error msg -> eprintf "Synthesis error: %s\n%!" msg; exit 1
-    | Ok g ->
-        (* Convert automaton to global type *)
-        let g_global = Automaton_to_global.automaton_to_global g in
-        let text = Pretty.string_of (fun fmt v -> Format.fprintf fmt "%d" v) g_global in
-        printf "Synthesised global type:\n%s\n%!" text;
-        exit 0
+    
+    if !synthesiser then (
+      (* New synthesiser approach: direct synthesis to global types *)
+      (* Parse each file as local type, encode, build automata *)
+      let parsed_parts =
+        List.filter_map (fun fname ->
+          if Filename.extension fname = "" || Filename.extension fname = ".st" then
+            match parse_file ~local:true fname with
+            | `Local lt ->
+                let lt_enc = Encode.encode_local lt in
+                let role = Filename.chop_extension (Filename.basename fname) in
+                Some (role, lt_enc)
+            | _ -> None
+          else None) file_list
+      in
+      
+      (* Build role mapping *)
+      let roles = List.map fst parsed_parts in
+      let role_array = Array.of_list roles in
+      let role_to_int role = 
+        match Array.find_index ((=) role) role_array with
+        | Some i -> i
+        | None -> failwith ("Unknown role: " ^ role)
+      in
+      
+      (* Build int_graph automata using role mapping *)
+      let automata = List.map (fun (_role, lt_enc) ->
+        Local_automaton.of_local_int lt_enc role_to_int
+      ) parsed_parts in
+      
+      let cfsm = Array.of_list automata in
+      let participant_roles = role_array in
+      
+      printf "Using new synthesiser algorithm...\n%!";
+      let g_global = Synthesiser.synth cfsm participant_roles in
+      let text = Pretty.string_of (fun fmt v -> Format.fprintf fmt "%d" v) g_global in
+      printf "Synthesised global type:\n%s\n%!" text;
+      exit 0
+    ) else (
+      (* Original synthesis approach: via automaton *)
+      (* Parse each file as local type, encode, build automata *)
+      let parts =
+        List.filter_map (fun fname ->
+          if Filename.extension fname = "" || Filename.extension fname = ".st" then
+            match parse_file ~local:true fname with
+            | `Local lt ->
+                let lt_enc = Encode.encode_local lt in
+                let role = Filename.chop_extension (Filename.basename fname) in
+                let la = Local_automaton.of_local lt_enc in
+                Some { Synthesis.role = role; laut = la }
+            | _ -> None
+          else None) file_list
+      in
+      match Synthesis.synthesise parts with
+      | Error msg -> eprintf "Synthesis error: %s\n%!" msg; exit 1
+      | Ok g ->
+          (* Convert automaton to global type *)
+          let g_global = Automaton_to_global.automaton_to_global g in
+          let text = Pretty.string_of (fun fmt v -> Format.fprintf fmt "%d" v) g_global in
+          printf "Synthesised global type:\n%s\n%!" text;
+          exit 0
+    )
   );
 
   (* Regular single-input mode --------------------------------------- *)

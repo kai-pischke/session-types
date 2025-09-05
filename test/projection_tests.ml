@@ -121,7 +121,14 @@ let projection_tests =
       ~role:"c"
       ~expected_local:"d ! [Int]; end";
 
-    (* 6. Unprojectable types *)
+    (* 6. Including parallel composition *)
+    check_projection
+      ~name:"exponential blowup"
+      ~global:"a -> b { Twos: rec t . b -> c { Done: end, Continue: b -> c { Continue: t } }, Threes: rec t . b -> c { Done: end, Continue: b -> c { Continue: b -> c { Continue: t } } } }"
+      ~role:"c"
+      ~expected_local:"rec t . b ? { Done: end, Continue: b ? { Continue: b ? { Done: end, Continue: b ? { Done: end, Continue: b ? { Done: end, Continue: b ? { Continue: t } } } } } }";
+
+    (* 7. Unprojectable types *)
     check_unprojectable
       ~name:"unprojectable - inconsistent message types"
       ~global:"a -> b { Ok: c -> d : [Int]; end, Err: c -> d : [Bool]; end }"
