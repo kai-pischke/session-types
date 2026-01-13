@@ -1,10 +1,10 @@
 # Session Type Checker
 
-Tiny toolkit for normalising global/local session types and checking their projections.
+Toolkit for normalising global/local session types and checking their projections.
 
-- Library entrypoints: `Normalise.encode`/`encode_local`, `Automaton.of_global`, `Coinductive.project` (knowledge-set), `Inductive.project` (syntactic), `Automaton_to_local.automaton_to_local`.
-- Data: `case studies/global/*.global` and `case studies/local/**/*.st`.
-- Typical flow: normalise → build automaton → project → render local types.
+- Library entrypoints: `Normalise.encode`/`encode_local`, `Automaton.of_global`, `Coinductive.project` (coinductive), `Inductive.project` (inductive), `Automaton_to_local.automaton_to_local`.
+- Case studies: `case studies/global/*.global` and `case studies/local/**/*.st`.
+
 
 CLI (`dune exec stc -- <command>`):
 - `parse-global <file>` pretty-prints a global type.

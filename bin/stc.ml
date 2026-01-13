@@ -34,7 +34,7 @@ type merge_variant = Full | Plain
 type graph_format = Dot | Json | Png
 type emit_target = {
   fmt : graph_format;
-  path : string;
+  path : string option;
 }
 
 let parse_graph_format = function
@@ -89,6 +89,10 @@ type project_emit_opts = {
 
 let cmd_project alg variant file role_opt emit_opts =
   let g = or_fail (Case_studies.parse_global_file file) in
+  let base =
+    file |> Filename.basename |> Filename.remove_extension
+  in
+  let ext_of_fmt = function Dot -> "dot" | Json -> "json" | Png -> "png" in
   let roles =
     match role_opt with
     | Some r -> [ r ]
@@ -144,19 +148,27 @@ let cmd_project alg variant file role_opt emit_opts =
          let path = Filename.concat dir (r ^ ".st") in
          write_file path txt
        ) results);
-    (match emit_opts.emit_global with
+  (match emit_opts.emit_global with
    | None -> ()
    | Some {fmt; path} ->
+       let resolved = match path with
+         | Some p -> p
+         | None -> Printf.sprintf "%s_global.%s" base (ext_of_fmt fmt)
+       in
        (match fmt with
-        | Dot -> write_file path (Automaton.dot_of_graph global_aut)
-        | Json -> write_file path (Automaton.json_of_graph global_aut)
-        | Png -> write_dot_as_png (Automaton.dot_of_graph global_aut) path));
+        | Dot -> write_file resolved (Automaton.dot_of_graph global_aut)
+        | Json -> write_file resolved (Automaton.json_of_graph global_aut)
+        | Png -> write_dot_as_png (Automaton.dot_of_graph global_aut) resolved));
   (match emit_opts.emit_locals with
    | None -> ()
    | Some {fmt; path} ->
-       mkdir_p path;
+       let dir = match path with
+         | Some d -> d
+         | None -> Printf.sprintf "%s_locals" base
+       in
+       mkdir_p dir;
        List.iter (fun (r, (_, aut)) ->
-         let fname = Filename.concat path (r ^ (match fmt with Dot -> ".dot" | Json -> ".json" | Png -> ".png")) in
+         let fname = Filename.concat dir (r ^ "." ^ ext_of_fmt fmt) in
          let rendered = match fmt with
            | Dot -> Local_automaton.dot_of_graph aut
            | Json -> Local_automaton.json_of_graph aut
@@ -190,6 +202,8 @@ let cmd_synth opts dir =
   try
     let roles = List.map fst locals in
     let role_array = Array.of_list roles in
+    let base = Filename.basename dir in
+    let ext_of_fmt = function Dot -> "dot" | Json -> "json" | Png -> "png" in
     let role_to_int role =
       match Array.find_index ((=) role) role_array with
       | Some i -> i
@@ -206,6 +220,10 @@ let cmd_synth opts dir =
     (match opts.emit_global with
      | None -> ()
      | Some {fmt; path} ->
+         let resolved = match path with
+           | Some p -> p
+           | None -> Printf.sprintf "%s_global.%s" base (ext_of_fmt fmt)
+         in
          let aut = Automaton.of_global global in
          let rendered = match fmt with
            | Dot -> Automaton.dot_of_graph aut
@@ -213,14 +231,18 @@ let cmd_synth opts dir =
            | Png -> Automaton.dot_of_graph aut
          in
          (match fmt with
-          | Png -> write_dot_as_png rendered path
-          | _ -> write_file path rendered));
+          | Png -> write_dot_as_png rendered resolved
+          | _ -> write_file resolved rendered));
     (match opts.emit_locals with
      | None -> ()
      | Some {fmt; path} ->
-         mkdir_p path;
+         let dir = match path with
+           | Some d -> d
+           | None -> Printf.sprintf "%s_locals" base
+         in
+         mkdir_p dir;
          List.iter2 (fun role aut ->
-           let fname = Filename.concat path (role ^ (match fmt with Dot -> ".dot" | Json -> ".json" | Png -> ".png")) in
+           let fname = Filename.concat dir (role ^ "." ^ ext_of_fmt fmt) in
            let rendered = match fmt with
              | Dot -> Local_automaton.dot_of_graph aut
              | Json -> Local_automaton.json_of_graph aut
@@ -295,10 +317,16 @@ let parse_project_args args =
         aux Coinductive Plain out_dir emit_global emit_locals file role_opt tl
     | "--out-dir" :: d :: tl ->
         aux alg variant (Some d) emit_global emit_locals file role_opt tl
-    | "--emit-global" :: fmt :: path :: tl ->
-        aux alg variant out_dir (Some {fmt=parse_graph_format fmt; path}) emit_locals file role_opt tl
-    | "--emit-locals" :: fmt :: dir :: tl ->
-        aux alg variant out_dir emit_global (Some {fmt=parse_graph_format fmt; path=dir}) file role_opt tl
+    | "--emit-global" :: fmt :: path_opt ->
+        (match path_opt with
+         | p :: tl when String.(length p > 0) && not (String.get p 0 = '-') ->
+             aux alg variant out_dir (Some {fmt=parse_graph_format fmt; path=Some p}) emit_locals file role_opt tl
+         | tl -> aux alg variant out_dir (Some {fmt=parse_graph_format fmt; path=None}) emit_locals file role_opt tl)
+    | "--emit-locals" :: fmt :: dir_opt ->
+        (match dir_opt with
+         | d :: tl when String.(length d > 0) && not (String.get d 0 = '-') ->
+             aux alg variant out_dir emit_global (Some {fmt=parse_graph_format fmt; path=Some d}) file role_opt tl
+         | tl -> aux alg variant out_dir emit_global (Some {fmt=parse_graph_format fmt; path=None}) file role_opt tl)
     | arg :: tl when file = None ->
         aux alg variant out_dir emit_global emit_locals (Some arg) role_opt tl
     | arg :: tl when role_opt = None ->
@@ -342,10 +370,16 @@ let parse_synth_args args =
          | None -> usage ())
     | "--out" :: p :: tl ->
         aux (Some p) emit_global emit_locals dir_opt tl
-    | "--emit-global" :: fmt :: path :: tl ->
-        aux out (Some {fmt=parse_graph_format fmt; path}) emit_locals dir_opt tl
-    | "--emit-locals" :: fmt :: dir :: tl ->
-        aux out emit_global (Some {fmt=parse_graph_format fmt; path=dir}) dir_opt tl
+    | "--emit-global" :: fmt :: rest ->
+        (match rest with
+         | p :: tl when String.length p > 0 && not (String.get p 0 = '-') ->
+             aux out (Some {fmt=parse_graph_format fmt; path=Some p}) emit_locals dir_opt tl
+         | tl -> aux out (Some {fmt=parse_graph_format fmt; path=None}) emit_locals dir_opt tl)
+    | "--emit-locals" :: fmt :: rest ->
+        (match rest with
+         | d :: tl when String.length d > 0 && not (String.get d 0 = '-') ->
+             aux out emit_global (Some {fmt=parse_graph_format fmt; path=Some d}) dir_opt tl
+         | tl -> aux out emit_global (Some {fmt=parse_graph_format fmt; path=None}) dir_opt tl)
     | arg :: tl when dir_opt = None ->
         aux out emit_global emit_locals (Some arg) tl
     | arg :: _ -> exit_error ("Unexpected argument: " ^ arg)
