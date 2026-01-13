@@ -2,4 +2,4 @@
  (name stc)
  (public_name stc)
  (modules stc)
- (libraries stc_lib))
+ (libraries stc_lib unix))
