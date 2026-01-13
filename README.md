@@ -1,4 +1,4 @@
-# Top-down = Bottom-up
+# Session Type Checker
 
 Tiny toolkit for normalising global/local session types and checking their projections.
 
