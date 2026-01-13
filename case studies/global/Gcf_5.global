@@ -1,0 +1,89 @@
+p -> r {
+  l1: rec t. p -> q {
+    a: p -> q {
+      a: p -> q {
+        a: t
+      }
+    },
+    b: p -> q {
+      l1: end
+    }
+  },
+  l2: rec t. p -> q {
+    a: p -> q {
+      a: p -> q {
+        a: p -> q {
+          a: t
+        }
+      }
+    },
+    b: p -> q {
+      l2: end
+    }
+  },
+  l3: rec t. p -> q {
+    a: p -> q {
+      a: p -> q {
+        a: p -> q {
+          a: p -> q {
+            a: p -> q {
+              a: t
+            }
+          }
+        }
+      }
+    },
+    b: p -> q {
+      l3: end
+    }
+  },
+  l4: rec t. p -> q {
+    a: p -> q {
+      a: p -> q {
+        a: p -> q {
+          a: p -> q {
+            a: p -> q {
+              a: p -> q {
+                a: p -> q {
+                  a: t
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    b: p -> q {
+      l4: end
+    }
+  },
+  l5: rec t. p -> q {
+    a: p -> q {
+      a: p -> q {
+        a: p -> q {
+          a: p -> q {
+            a: p -> q {
+              a: p -> q {
+                a: p -> q {
+                  a: p -> q {
+                    a: p -> q {
+                      a: p -> q {
+                        a: p -> q {
+                          a: t
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    b: p -> q {
+      l5: end
+    }
+  }
+}
+

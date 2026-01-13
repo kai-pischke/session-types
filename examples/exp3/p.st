@@ -1,1 +1,0 @@
-r ! { l: rec t. q ! { a: q ! { a: q ! { a: t } }, b: q ! { l: end } } }

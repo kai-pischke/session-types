@@ -1,0 +1,14 @@
+rec t. a -> b {
+  loop: c -> d {
+    loop: t,
+    stop: rec t. a -> b {
+      loop: t,
+      stop: end
+    }
+  },
+  stop: rec t. c -> d {
+    loop: t,
+    stop: end
+  }
+}
+

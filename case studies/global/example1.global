@@ -1,0 +1,4 @@
+rec t. a -> b {
+  l1: t,
+  l2: b -> c {l: end}
+}

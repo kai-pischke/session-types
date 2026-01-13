@@ -1,6 +1,6 @@
 (library
  (name      stc_lib)
- (modules   (:standard \ main))
+ (modules   :standard)
  (wrapped     false)
  (libraries menhirLib))
 
@@ -8,11 +8,4 @@
 (menhir
  (modules parser)          ; this will generate parser.ml from parser.mly
  (flags (--explain))
-)
-
-(executable
- (name main)
- (public_name stc)
- (modules main)
- (libraries stc_lib)  
 )

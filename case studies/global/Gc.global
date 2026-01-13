@@ -1,0 +1,13 @@
+rec t. a -> b {
+  loop: c -> d {
+    loop: a -> c : [msg]; t,
+    stop: rec t. a -> c : [msg]; a -> b {
+      loop: t,
+      stop: rec t. a -> c : [msg]; t
+    }
+  },
+  stop: rec t. c -> d {
+    loop: a -> c : [msg]; t,
+    stop: rec t. a -> c : [msg]; t
+  }
+}

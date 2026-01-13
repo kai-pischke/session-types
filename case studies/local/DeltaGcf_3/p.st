@@ -1,0 +1,1 @@
+r ? { l1: rec t1. q ? { a: q ? { a: q ? { a: t1 } }, b: q ? { l1: end } }, l2: rec t5. q ? { a: q ? { a: q ? { a: q ? { a: t5 } } }, b: q ? { l2: end } }, l3: rec t10. q ? { a: q ? { a: q ? { a: q ? { a: q ? { a: q ? { a: t10 } } } } }, b: q ? { l3: end } } }

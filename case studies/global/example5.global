@@ -1,0 +1,1 @@
+(rec t. a -> b {l: t, l_prime: end}) | (rec t. c -> d {l: t, l_prime: end})

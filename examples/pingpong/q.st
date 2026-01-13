@@ -1,1 +1,0 @@
-rec t . p ? [Int]; p ! [Bool]; t 

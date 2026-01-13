@@ -1,0 +1,6 @@
+(executable
+ (name case_study)
+ (public_name case-study)
+ (modules case_study)
+ (libraries stc_lib)  
+)

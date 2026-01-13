@@ -1,0 +1,12 @@
+lib: [
+  "_build/install/default/lib/stc/META"
+  "_build/install/default/lib/stc/dune-package"
+  "_build/install/default/lib/stc/opam"
+]
+bin: [
+  "_build/install/default/bin/case-study"
+  "_build/install/default/bin/stc"
+]
+doc: [
+  "_build/install/default/doc/stc/README.md"
+]

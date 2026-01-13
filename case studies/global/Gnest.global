@@ -1,0 +1,7 @@
+rec t. alice -> bob { 
+  k: rec t2. carl -> dave { 
+    left: t, 
+    right: alice -> bob { k: t2 } 
+  } 
+}
+

@@ -1,0 +1,8 @@
+rec t. a -> b {
+  loop: t,
+  stop: end
+} | rec t. c -> d {
+  loop: t,
+  stop: end
+}
+

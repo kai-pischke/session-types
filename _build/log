@@ -1,0 +1,16 @@
+# dune exec stc -- case-studies
+# OCAMLPARAM: unset
+# Shared cache: enabled-except-user-rules
+# Shared cache location: /Users/kaihke/.cache/dune/db
+# Workspace root: /Users/kaihke/Documents/tool
+# Auto-detected concurrency: 8
+# Dune context:
+#  { name = "default"
+#  ; kind = "default"
+#  ; profile = Dev
+#  ; merlin = true
+#  ; fdo_target_exe = None
+#  ; build_dir = In_build_dir "default"
+#  ; instrument_with = []
+#  }
+$ /Users/kaihke/.opam/default/bin/ocamlc.opt -config > /var/folders/0b/k46rybhd1s5c42226twzljsr0000gp/T/dune_854725_output

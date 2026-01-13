@@ -1,0 +1,20 @@
+rec t0. q -> p {
+  loop: 
+    rec t1 . q -> r {
+      a: rec t2 . q -> r { 
+        a: rec t3 . q -> r { 
+          a: rec t4 . q -> r { 
+            a: rec t5 . q -> r { 
+              a: q -> r { reset: t0 },
+              b: q -> p { reset: t0, continue: t5 }
+            },
+            b: q -> p { reset: t0, continue: t4 } 
+          },
+          b: q -> p { reset: t0, continue: t3 } 
+        },
+        b: q -> p { reset: t0, continue: t2 } 
+      },
+      b: q -> p { reset: t0, continue: t1 } 
+    },
+  done: q -> r { done: end }
+}
