@@ -1,7 +1,0 @@
-(lang dune 3.19)
-(name stc)
-(sections (lib .) (bin ../../bin) (doc ../../doc/stc))
-(files
- (lib (META dune-package opam))
- (bin (case-study stc))
- (doc (README.md)))
