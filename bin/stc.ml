@@ -31,7 +31,7 @@ let cmd_parse_global file =
 type project_algorithm = Coinductive | Inductive
 type merge_variant = Full | Plain
 
-type graph_format = Dot | Json
+type graph_format = Dot | Json | Png
 type emit_target = {
   fmt : graph_format;
   path : string;
@@ -40,6 +40,7 @@ type emit_target = {
 let parse_graph_format = function
   | "dot" -> Dot
   | "json" -> Json
+  | "png" -> Png
   | f -> exit_error ("Unknown format: " ^ f)
 
 let emit_string ?out s =
@@ -54,6 +55,16 @@ let write_file path contents =
   let oc = open_out path in
   Stdlib.output_string oc contents;
   close_out oc
+
+let write_dot_as_png dot path =
+  let tmp = Filename.temp_file "stc_dot" ".dot" in
+  write_file tmp dot;
+  let cmd = Printf.sprintf "dot -Tpng %s -o %s" (Filename.quote tmp) (Filename.quote path) in
+  match Sys.command cmd with
+  | 0 -> Sys.remove tmp
+  | code ->
+      Sys.remove tmp;
+      exit_error (Printf.sprintf "dot failed with exit code %d" code)
 
 let mkdir_p dir =
   let rec aux d =
@@ -133,23 +144,27 @@ let cmd_project alg variant file role_opt emit_opts =
          let path = Filename.concat dir (r ^ ".st") in
          write_file path txt
        ) results);
-  (match emit_opts.emit_global with
+    (match emit_opts.emit_global with
    | None -> ()
    | Some {fmt; path} ->
        (match fmt with
         | Dot -> write_file path (Automaton.dot_of_graph global_aut)
-        | Json -> write_file path (Automaton.json_of_graph global_aut)));
+        | Json -> write_file path (Automaton.json_of_graph global_aut)
+        | Png -> write_dot_as_png (Automaton.dot_of_graph global_aut) path));
   (match emit_opts.emit_locals with
    | None -> ()
    | Some {fmt; path} ->
        mkdir_p path;
        List.iter (fun (r, (_, aut)) ->
-         let fname = Filename.concat path (r ^ (match fmt with Dot -> ".dot" | Json -> ".json")) in
+         let fname = Filename.concat path (r ^ (match fmt with Dot -> ".dot" | Json -> ".json" | Png -> ".png")) in
          let rendered = match fmt with
            | Dot -> Local_automaton.dot_of_graph aut
            | Json -> Local_automaton.json_of_graph aut
+           | Png -> Local_automaton.dot_of_graph aut
          in
-         write_file fname rendered
+         (match fmt with
+          | Png -> write_dot_as_png rendered fname
+          | _ -> write_file fname rendered)
        ) results)
 
 let cmd_check file =
@@ -195,19 +210,25 @@ let cmd_synth opts dir =
          let rendered = match fmt with
            | Dot -> Automaton.dot_of_graph aut
            | Json -> Automaton.json_of_graph aut
+           | Png -> Automaton.dot_of_graph aut
          in
-         write_file path rendered);
+         (match fmt with
+          | Png -> write_dot_as_png rendered path
+          | _ -> write_file path rendered));
     (match opts.emit_locals with
      | None -> ()
      | Some {fmt; path} ->
          mkdir_p path;
          List.iter2 (fun role aut ->
-           let fname = Filename.concat path (role ^ (match fmt with Dot -> ".dot" | Json -> ".json")) in
+           let fname = Filename.concat path (role ^ (match fmt with Dot -> ".dot" | Json -> ".json" | Png -> ".png")) in
            let rendered = match fmt with
              | Dot -> Local_automaton.dot_of_graph aut
              | Json -> Local_automaton.json_of_graph aut
+             | Png -> Local_automaton.dot_of_graph aut
            in
-           write_file fname rendered
+           (match fmt with
+            | Png -> write_dot_as_png rendered fname
+            | _ -> write_file fname rendered)
          ) roles local_auts)
   with _ -> exit_error "Synthesis failed"
 
@@ -222,8 +243,14 @@ let cmd_automaton_global fmt out file =
     match fmt with
     | Dot -> Automaton.dot_of_graph aut
     | Json -> Automaton.json_of_graph aut
+    | Png -> Automaton.dot_of_graph aut
   in
-  emit_string ?out rendered
+  (match fmt with
+   | Png ->
+       (match out with
+        | None -> exit_error "--out is required for PNG output"
+        | Some path -> write_dot_as_png rendered path)
+   | _ -> emit_string ?out rendered)
 
 let cmd_automaton_local fmt out file =
   let l = or_fail (Case_studies.parse_local_file file) in
@@ -233,8 +260,14 @@ let cmd_automaton_local fmt out file =
     match fmt with
     | Dot -> Local_automaton.dot_of_graph aut
     | Json -> Local_automaton.json_of_graph aut
+    | Png -> Local_automaton.dot_of_graph aut
   in
-  emit_string ?out rendered
+  (match fmt with
+   | Png ->
+       (match out with
+        | None -> exit_error "--out is required for PNG output"
+        | Some path -> write_dot_as_png rendered path)
+   | _ -> emit_string ?out rendered)
 
 (* Argument parsing ------------------------------------------------- *)
 
