@@ -1,1 +1,1 @@
-src/automaton.ml: Array Ast Format Int List Map Set String
+src/automaton.ml: Array Ast Buffer Format Int List Map Printf Set String

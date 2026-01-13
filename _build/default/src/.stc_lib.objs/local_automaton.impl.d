@@ -1,1 +1,1 @@
-src/local_automaton.ml: Array Ast Format Int List Map String
+src/local_automaton.ml: Array Ast Buffer Format Int List Map Option Printf String

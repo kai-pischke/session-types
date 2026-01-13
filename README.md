@@ -12,6 +12,8 @@ CLI (`dune exec stc -- <command>`):
 - `check <file>` runs well-formedness + balance.
 - `synth <local-dir>` synthesises a global type from locals.
 - `case-studies [--path dir] [--no-types]` runs the bundled benchmarks.
+- `automaton-global <file> [--format dot|json] [--out path]` exports the global automaton (after normalisation).
+- `automaton-local <file> [--format dot|json] [--out path]` exports the local automaton.
 
 Examples:
 

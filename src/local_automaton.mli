@@ -58,4 +58,8 @@ val of_local_int : int local -> (role -> int) -> int_graph
 val pp_graph : Format.formatter -> graph -> unit
 val string_of_graph : graph -> string
 val pp_int_graph : Format.formatter -> int_graph -> unit
-val string_of_int_graph : int_graph -> string 
+val string_of_int_graph : int_graph -> string
+
+(* Export *)
+val dot_of_graph : graph -> string
+val json_of_graph : graph -> string

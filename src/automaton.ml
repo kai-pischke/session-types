@@ -224,3 +224,67 @@ let pp_graph fmt (g : graph) =
 
 let string_of_graph g =
   Format.asprintf "%a" pp_graph g
+
+(* DOT / JSON export *)
+let escape s =
+  let b = Buffer.create (String.length s) in
+  String.iter (function
+    | '"' -> Buffer.add_string b "\\\""
+    | '\\' -> Buffer.add_string b "\\\\"
+    | c -> Buffer.add_char b c) s;
+  Buffer.contents b
+
+let dot_of_graph (g : graph) : string =
+  let b = Buffer.create 512 in
+  Buffer.add_string b "digraph global {\n  rankdir=LR;\n";
+  if not (IntSet.is_empty g.start_states) then (
+    Buffer.add_string b "  start [shape=point];\n";
+    IntSet.iter (fun s -> Buffer.add_string b (Printf.sprintf "  start -> %d;\n" s)) g.start_states
+  );
+  for i = 0 to g.num_states - 1 do
+    let p, q = g.roles.(i) in
+    Buffer.add_string b (Printf.sprintf "  %d [label=\"%d: %s -> %s\"];\n" i i (escape p) (escape q))
+  done;
+  let add_edge src dst lbl =
+    Buffer.add_string b (Printf.sprintf "  %d -> %d [label=\"%s\"];\n" src dst (escape lbl))
+  in
+  for i = 0 to g.num_states - 1 do
+    match g.kinds.(i) with
+    | Msg (base, dsts) ->
+        IntSet.iter (fun d -> add_edge i d base) dsts
+    | Bra branches ->
+        List.iter (fun (lbl, dsts) ->
+          IntSet.iter (fun d -> add_edge i d lbl) dsts
+        ) branches
+  done;
+  Buffer.add_string b "}\n";
+  Buffer.contents b
+
+let json_of_graph (g : graph) : string =
+  let state_json i =
+    let p, q = g.roles.(i) in
+    match g.kinds.(i) with
+    | Msg (base, dsts) ->
+        let dst_list = IntSet.elements dsts |> List.map string_of_int |> String.concat "," in
+        Printf.sprintf
+          {|{"id":%d,"roles":{"sender":"%s","receiver":"%s"},"kind":{"tag":"msg","base":"%s","dests":[%s]}}|}
+          i (escape p) (escape q) (escape base) dst_list
+    | Bra branches ->
+        let branches_json =
+          branches
+          |> List.map (fun (lbl, dsts) ->
+                 let dst_list = IntSet.elements dsts |> List.map string_of_int |> String.concat "," in
+                 Printf.sprintf {|{"label":"%s","dests":[%s]}|} (escape lbl) dst_list)
+          |> String.concat ","
+        in
+        Printf.sprintf
+          {|{"id":%d,"roles":{"sender":"%s","receiver":"%s"},"kind":{"tag":"bra","branches":[%s]}}|}
+          i (escape p) (escape q) branches_json
+  in
+  let states =
+    List.init g.num_states state_json |> String.concat ","
+  in
+  let starts =
+    g.start_states |> IntSet.elements |> List.map string_of_int |> String.concat ","
+  in
+  Printf.sprintf {|{"start_states":[%s],"states":[%s]}|} starts states

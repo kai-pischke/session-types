@@ -287,4 +287,91 @@ let pp_int_graph fmt (g : int_graph) =
   ) state_ids
 
 let string_of_int_graph g =
-  Format.asprintf "%a" pp_int_graph g 
+  Format.asprintf "%a" pp_int_graph g
+
+(* DOT / JSON export *)
+let escape s =
+  let b = Buffer.create (String.length s) in
+  String.iter (function
+    | '"' -> Buffer.add_string b "\\\""
+    | '\\' -> Buffer.add_string b "\\\\"
+    | c -> Buffer.add_char b c) s;
+  Buffer.contents b
+
+let dot_of_graph (g : graph) : string =
+  let b = Buffer.create 512 in
+  Buffer.add_string b "digraph local {\n  rankdir=LR;\n";
+  (match g.start_state with
+   | Some s ->
+       Buffer.add_string b "  start [shape=point];\n";
+       Buffer.add_string b (Printf.sprintf "  start -> %d;\n" s)
+   | None -> ());
+  for i = 0 to g.num_states - 1 do
+    let role = g.roles.(i) in
+    Buffer.add_string b (Printf.sprintf "  %d [label=\"%d: %s\"];\n" i i (escape role))
+  done;
+  let add_edge src dst lbl =
+    Buffer.add_string b (Printf.sprintf "  %d -> %d [label=\"%s\"];\n" src dst (escape lbl))
+  in
+  for i = 0 to g.num_states - 1 do
+    match g.kinds.(i) with
+    | Snd (base, Some dst) -> add_edge i dst (base ^ " !")
+    | Snd (_, None) -> ()
+    | Rcv (base, Some dst) -> add_edge i dst (base ^ " ?")
+    | Rcv (_, None) -> ()
+    | Int branches ->
+        List.iter (fun (lbl, dopt) ->
+          match dopt with Some d -> add_edge i d ("int " ^ lbl) | None -> ()
+        ) branches
+    | Ext branches ->
+        List.iter (fun (lbl, dopt) ->
+          match dopt with Some d -> add_edge i d ("ext " ^ lbl) | None -> ()
+        ) branches
+  done;
+  Buffer.add_string b "}\n";
+  Buffer.contents b
+
+let json_of_graph (g : graph) : string =
+  let state_json i =
+    let role = g.roles.(i) in
+    match g.kinds.(i) with
+    | Snd (base, dst_opt) ->
+        let dst = Option.map string_of_int dst_opt |> Option.value ~default:"null" in
+        Printf.sprintf
+          {|{"id":%d,"role":"%s","kind":{"tag":"snd","base":"%s","dest":%s}}|}
+          i (escape role) (escape base) dst
+    | Rcv (base, dst_opt) ->
+        let dst = Option.map string_of_int dst_opt |> Option.value ~default:"null" in
+        Printf.sprintf
+          {|{"id":%d,"role":"%s","kind":{"tag":"rcv","base":"%s","dest":%s}}|}
+          i (escape role) (escape base) dst
+    | Int branches ->
+        let branches_json =
+          branches
+          |> List.map (fun (lbl, dst_opt) ->
+                 let dst = Option.map string_of_int dst_opt |> Option.value ~default:"null" in
+                 Printf.sprintf {|{"label":"%s","dest":%s}|} (escape lbl) dst)
+          |> String.concat ","
+        in
+        Printf.sprintf
+          {|{"id":%d,"role":"%s","kind":{"tag":"int","branches":[%s]}}|}
+          i (escape role) branches_json
+    | Ext branches ->
+        let branches_json =
+          branches
+          |> List.map (fun (lbl, dst_opt) ->
+                 let dst = Option.map string_of_int dst_opt |> Option.value ~default:"null" in
+                 Printf.sprintf {|{"label":"%s","dest":%s}|} (escape lbl) dst)
+          |> String.concat ","
+        in
+        Printf.sprintf
+          {|{"id":%d,"role":"%s","kind":{"tag":"ext","branches":[%s]}}|}
+          i (escape role) branches_json
+  in
+  let states =
+    List.init g.num_states state_json |> String.concat ","
+  in
+  let start_state =
+    Option.map string_of_int g.start_state |> Option.value ~default:"null"
+  in
+  Printf.sprintf {|{"start_state":%s,"states":[%s]}|} start_state states

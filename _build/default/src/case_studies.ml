@@ -74,6 +74,22 @@ let parse_local_files (directory_path : string) : ((role * string local) list, s
   | Failure msg -> Error msg
   | e -> Error (Printexc.to_string e)
 
+let parse_local_file (filepath : string) : (string local, string) result =
+  try
+    let ic = open_in filepath in
+    let content = really_input_string ic (in_channel_length ic) in
+    close_in ic;
+    let lexbuf = Lexing.from_string content in
+    try Ok (Parser.lfile Lexer.token lexbuf)
+    with
+    | Parser.Error ->
+        let pos = lexbuf.lex_curr_p in
+        Error (sprintf "Parse error at line %d" pos.pos_lnum)
+    | e -> Error (Printexc.to_string e)
+  with
+  | Sys_error msg -> Error ("File error: " ^ msg)
+  | e -> Error (Printexc.to_string e)
+
 (* Projection / synthesis helpers ----------------------------------- *)
 
 let test_projectability (global_type : string global) (roles : role list)

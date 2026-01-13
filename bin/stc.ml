@@ -7,6 +7,8 @@ let usage () =
   eprintf "  check <file>\n";
   eprintf "  synth <local-dir>\n";
   eprintf "  case-studies [--path <dir>] [--no-types]\n";
+  eprintf "  automaton-global <file> [--format dot|json] [--out|-o <path>]\n";
+  eprintf "  automaton-local <file> [--format dot|json] [--out|-o <path>]\n";
   exit 1
 
 let exit_error msg =
@@ -28,6 +30,13 @@ let cmd_parse_global file =
 
 type project_algorithm = Coinductive | Inductive
 type merge_variant = Full | Plain
+
+type graph_format = Dot | Json
+
+let parse_graph_format = function
+  | "dot" -> Dot
+  | "json" -> Json
+  | f -> exit_error ("Unknown format: " ^ f)
 
 let cmd_project alg variant file role_opt =
   let g = or_fail (Case_studies.parse_global_file file) in
@@ -95,6 +104,36 @@ let cmd_synth dir =
 let cmd_case_studies ?(print_types=true) base_path =
   Case_studies.run ~print_types base_path
 
+let output_string ?out s =
+  match out with
+  | None -> print_endline s
+  | Some path ->
+      let oc = open_out path in
+      output_string oc s;
+      close_out oc
+
+let cmd_automaton_global fmt out file =
+  let g = or_fail (Case_studies.parse_global_file file) in
+  let g_int = Normalise.encode g in
+  let aut = Automaton.of_global g_int in
+  let rendered =
+    match fmt with
+    | Dot -> Automaton.dot_of_graph aut
+    | Json -> Automaton.json_of_graph aut
+  in
+  output_string ?out rendered
+
+let cmd_automaton_local fmt out file =
+  let l = or_fail (Case_studies.parse_local_file file) in
+  let l_int = Normalise.encode_local l in
+  let aut = Local_automaton.of_local l_int in
+  let rendered =
+    match fmt with
+    | Dot -> Local_automaton.dot_of_graph aut
+    | Json -> Local_automaton.json_of_graph aut
+  in
+  output_string ?out rendered
+
 (* Argument parsing ------------------------------------------------- *)
 
 let parse_project_args args =
@@ -138,6 +177,22 @@ let parse_case_study_args args =
   let path_opt, print_types = aux None true args in
   (Option.value path_opt ~default:"case studies", print_types)
 
+let parse_graph_args args =
+  let rec aux fmt out file = function
+    | [] ->
+        (match file with
+         | Some f -> (fmt, out, f)
+         | None -> usage ())
+    | "--format" :: f :: tl ->
+        aux (parse_graph_format f) out file tl
+    | "--out" :: p :: tl | "-o" :: p :: tl ->
+        aux fmt (Some p) file tl
+    | arg :: tl when file = None ->
+        aux fmt out (Some arg) tl
+    | arg :: _ -> exit_error ("Unexpected argument: " ^ arg)
+  in
+  aux Dot None None args
+
 let () =
   match Array.to_list Sys.argv with
   | [] -> usage ()
@@ -162,4 +217,10 @@ let () =
        | "case-studies" ->
            let path, print_types = parse_case_study_args args in
            cmd_case_studies ~print_types path
+       | "automaton-global" ->
+           let fmt, out, file = parse_graph_args args in
+           cmd_automaton_global fmt out file
+       | "automaton-local" ->
+           let fmt, out, file = parse_graph_args args in
+           cmd_automaton_local fmt out file
        | _ -> usage ())
