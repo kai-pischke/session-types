@@ -27,7 +27,7 @@ let rec pp_global pp_var fmt = function
     let first = ref true in
     List.iter
         (fun (lbl, g) ->
-            if !first then first := false else pp_print_string fmt " ; ";
+            if !first then first := false else pp_print_string fmt ", ";
             fprintf fmt "%s: %a" lbl (pp_global pp_var) g)
         branches;
     pp_print_string fmt " }"
@@ -59,21 +59,21 @@ let rec pp_local pp_var fmt = function
     fprintf fmt "%s ? %s. %a" r base (pp_local pp_var) cont
 
 | LInt (r, branches, _) ->
-    fprintf fmt "%s ? { " r;
+    fprintf fmt "%s ! { " r;
     let first = ref true in
     List.iter
       (fun (lbl, l) ->
-        if !first then first := false else pp_print_string fmt " ; ";
+        if !first then first := false else pp_print_string fmt ", ";
         fprintf fmt "%s: %a" lbl (pp_local pp_var) l)
       branches;
     pp_print_string fmt " }"
 
 | LExt (r, branches, _) ->
-    fprintf fmt "%s ! { " r;
+    fprintf fmt "%s ? { " r;
     let first = ref true in
     List.iter
       (fun (lbl, l) ->
-        if !first then first := false else pp_print_string fmt " ; ";
+        if !first then first := false else pp_print_string fmt ", ";
         fprintf fmt "%s: %a" lbl (pp_local pp_var) l)
       branches;
     pp_print_string fmt " }"
