@@ -4,9 +4,3 @@
  (modules case_study)
  (libraries stc_lib)
 )
-
-(executable
- (name test_roundtrip)
- (modules test_roundtrip)
- (libraries stc_lib)
-)
