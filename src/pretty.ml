@@ -19,7 +19,7 @@ let rec pp_global pp_var fmt = function
     fprintf fmt "rec %a. %a" pp_var v (pp_global pp_var) body
 
 | GMsg (p, q, base, cont, _) ->
-    fprintf fmt "%s -> %s : %s. %a"
+    fprintf fmt "%s -> %s : [%s]; %a"
         p q base (pp_global pp_var) cont
 
 | GBra (p, q, branches, _) ->
@@ -53,10 +53,10 @@ let rec pp_local pp_var fmt = function
     fprintf fmt "rec %a. %a" pp_var v (pp_local pp_var) body
 
 | LSend (r, base, cont, _) ->
-    fprintf fmt "%s ! %s. %a" r base (pp_local pp_var) cont
+    fprintf fmt "%s ! [%s]; %a" r base (pp_local pp_var) cont
 
 | LRecv (r, base, cont, _) ->
-    fprintf fmt "%s ? %s. %a" r base (pp_local pp_var) cont
+    fprintf fmt "%s ? [%s]; %a" r base (pp_local pp_var) cont
 
 | LInt (r, branches, _) ->
     fprintf fmt "%s ! { " r;

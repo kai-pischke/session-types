@@ -2,5 +2,11 @@
  (name case_study)
  (public_name case-study)
  (modules case_study)
- (libraries stc_lib)  
+ (libraries stc_lib)
+)
+
+(executable
+ (name test_roundtrip)
+ (modules test_roundtrip)
+ (libraries stc_lib)
 )
